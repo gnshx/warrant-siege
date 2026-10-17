@@ -190,7 +190,7 @@ export async function generateScorecardHtml(scorecard: Scorecard, outputPath: st
         ${scorecard.auditProofHash || "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
       </div>
       <div style="font-size: 0.75rem; color: #64748b;">
-        Every action state transition throughout this siege run was hashed and cryptographically chained to its predecessor. Any backdated edit or log omission produces an immediate mathematical verification failure.
+        Every action state transition throughout this siege run was hashed and cryptographically chained to its predecessor. Any backdated edit or log omission produces an immediate cryptographic verification failure.
       </div>
     </div>
   </div>
