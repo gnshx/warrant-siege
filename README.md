@@ -3,12 +3,12 @@
 **Adversarial Safety Test Harness & Scorecard Generator for Voice & MCP Agent Gateways**
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Invariants](https://img.shields.io/badge/Invariants-10%2F10_Satisfied-brightgreen.svg)](#architectural-invariants)
+[![Invariants](https://img.shields.io/badge/Invariants-11%2F11_Satisfied-brightgreen.svg)](#architectural-invariants)
 [![MCP Spec](https://img.shields.io/badge/MCP-2025--11--25_Streamable_HTTP-purple.svg)](https://modelcontextprotocol.io)
 
 Warrant Siege is a standalone adversarial testing tool designed to systematically attack Model Context Protocol (MCP) servers and safety gateways before they are put in front of voice assistants or customers.
 
-It verifies 10 fundamental safety and financial invariants ($I_1 - I_{10}$) by executing automated attack scenarios ($S_1 - S_{10}$) over real HTTP connections and generating interactive HTML/JSON scorecards and SVG badges.
+It verifies 10 fundamental safety and financial invariants ($I_1 - I_{10}$) by executing 11 automated attack scenarios ($S_1 - S_{11}$) over real HTTP connections and generating interactive HTML/JSON scorecards and SVG badges.
 
 ---
 
@@ -44,7 +44,7 @@ Options:
 
 ---
 
-## 10 Core Adversarial Attack Scenarios
+## 11 Core Adversarial Attack Scenarios
 
 | Scenario | Attack Vector | Target Invariant | Expected Gateway Defense |
 |---|---|---|---|
@@ -58,12 +58,13 @@ Options:
 | **S8** | Ambiguous Timeout & Reconciliation | $I_8$ (Reconciliation over Blind Retries) | Network drop triggers active reconciliation against provider truth, never blind retries. |
 | **S9** | Signed Action Receipt Forgery | $I_9$ (Action Authenticity) | Modifying parameters, spend, or key causes offline Ed25519 verification failure. |
 | **S10** | Pre-Settlement Grace-Hold Undo | $I_{10}$ (Undo Window Containment) | Cancellation during grace period cancels action with zero external provider effects. |
+| **S11** | Cross-User Plan & Budget Isolation | $I_6$ (User Boundary & Isolation) | User B blocked with 403 Forbidden from accessing or executing User A's plan; budgets isolated across users. |
 
 ---
 
-## CI / GitHub Action Integration
+## CI Workflow Template
 
-Add Warrant Siege directly to your CI pipeline:
+A reusable workflow template is provided in `ci/workflows/warrant-siege.yml` (copyable to `.github/workflows/` on repositories with GitHub Actions enabled):
 
 ```yaml
 name: Security & Safety Siege
