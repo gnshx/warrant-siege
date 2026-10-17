@@ -2,8 +2,9 @@
 
 **Adversarial Safety Test Harness & Scorecard Generator for Voice & MCP Agent Gateways**
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Invariants](https://img.shields.io/badge/Invariants-11%2F11_Satisfied-brightgreen.svg)](#architectural-invariants)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Invariants](https://img.shields.io/badge/Invariants-10%2F10_Satisfied-brightgreen.svg)](#architectural-invariants)
+[![Scenarios](https://img.shields.io/badge/Scenarios-11%2F11_Passed-brightgreen.svg)](#11-core-adversarial-attack-scenarios)
 [![MCP Spec](https://img.shields.io/badge/MCP-2025--11--25_Streamable_HTTP-purple.svg)](https://modelcontextprotocol.io)
 
 Warrant Siege is a standalone adversarial testing tool designed to systematically attack Model Context Protocol (MCP) servers and safety gateways before they are put in front of voice assistants or customers.
