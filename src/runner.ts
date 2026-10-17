@@ -28,18 +28,19 @@ export class SiegeRunner {
     return { status: res.status, ok: res.ok, json };
   }
 
-  private async createGrant(spendCapMinor: number, ttlSeconds: number = 3600, scopes: string[] = ["*"]) {
+  private async createGrant(spendCapMinor: number, ttlSeconds: number = 3600, scopes: string[] = ["*"], userId?: string) {
     const res = await fetch(`${this.adminUrl}/grants`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         scopes,
         spendCapMinor,
-        expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString()
+        expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
+        userId
       })
     });
     const json = await res.json();
-    return json.grant as { id: string; sessionToken: string; spendCapMinor: number };
+    return json.grant as { id: string; sessionToken: string; spendCapMinor: number; userId?: string };
   }
 
   private async getProviderBookings(providerName: string): Promise<any[]> {
@@ -615,6 +616,106 @@ export class SiegeRunner {
   }
 
   /**
+   * Scenario S11: Cross-User Plan & Budget Isolation (Invariant I6: Temporal & User Identity Authorization Boundary)
+   */
+  public async runS11(): Promise<ScenarioResult> {
+    const start = Date.now();
+    // 1. Create Grant A for User A with $200.00 spend cap
+    const grantA = await this.createGrant(20000, 3600, ["*"], "user_alice");
+    // 2. Create Grant B for User B with $100.00 spend cap
+    const grantB = await this.createGrant(10000, 3600, ["*"], "user_bob");
+
+    // 3. User A proposes Plan A ($45.00 train)
+    const proposeResA = await this.mcpCall(grantA.sessionToken, "propose_plan", {
+      steps: [
+        {
+          toolName: "book_train",
+          params: { origin: "Boston", destination: "New York", price: 4500 },
+          estimatedCostMinor: 4500
+        }
+      ]
+    });
+    const planAData = JSON.parse(proposeResA.json.result.content[0].text);
+    const planAId = planAData.planId;
+
+    // 4. User B attempts to read Plan A via get_plan_status -> MUST BE 403 Forbidden
+    const userBReadRes = await this.mcpCall(grantB.sessionToken, "get_plan_status", { planId: planAId });
+    const readBlocked = userBReadRes.status === 403 || userBReadRes.json?.error?.code === -32008;
+
+    // 5. User B attempts to execute Plan A -> MUST BE 403 Forbidden
+    const userBExecRes = await this.mcpCall(grantB.sessionToken, "execute_plan", {
+      planId: planAId,
+      idempotencyKey: `user_b_steal_${randomUUID()}`
+    });
+    const execBlocked = userBExecRes.status === 403 || userBExecRes.json?.error?.code === -32008;
+
+    // 6. User B attempts to undo/cancel Plan A -> MUST BE 403 Forbidden
+    const userBCancelRes = await this.mcpCall(grantB.sessionToken, "undo_plan", { planId: planAId });
+    const cancelBlocked = userBCancelRes.status === 403 || userBCancelRes.json?.error?.code === -32008;
+
+    // 7. User B executes their own plan for $30.00 -> MUST succeed and debit ONLY User B
+    const proposeResB = await this.mcpCall(grantB.sessionToken, "propose_plan", {
+      steps: [
+        {
+          toolName: "book_train",
+          params: { origin: "Chicago", destination: "Milwaukee", price: 3000 },
+          estimatedCostMinor: 3000
+        }
+      ]
+    });
+    const planBData = JSON.parse(proposeResB.json.result.content[0].text);
+    const planBId = planBData.planId;
+    const userBExecOwnRes = await this.mcpCall(grantB.sessionToken, "execute_plan", {
+      planId: planBId,
+      idempotencyKey: `user_b_legit_${randomUUID()}`
+    });
+    const ownPlanSucceeded = userBExecOwnRes.status === 200;
+
+    // 8. Check spend isolation: User B has spent 3000 minor units ($30), User A remains at 0 spent
+    const grantARes = await fetch(`${this.adminUrl}/grants/${grantA.id}`);
+    const grantAData = await grantARes.json();
+    const grantBRes = await fetch(`${this.adminUrl}/grants/${grantB.id}`);
+    const grantBData = await grantBRes.json();
+
+    const spendIsolated = grantAData.grant.spentMinor === 0 && grantBData.grant.spentMinor === 3000;
+
+    // 9. Two sessions for the same user share one budget:
+    // Create Session A2 for user_alice
+    const grantA2 = await this.createGrant(20000, 3600, ["*"], "user_alice");
+    // User A executes Plan A using Session 1
+    await this.mcpCall(grantA.sessionToken, "execute_plan", {
+      planId: planAId,
+      idempotencyKey: `user_a_exec_${randomUUID()}`
+    });
+    // Session 2 checks grant / budget -> sees spend of 4500
+    const grantA2Res = await fetch(`${this.adminUrl}/grants/${grantA2.id}`);
+    const grantA2Data = await grantA2Res.json();
+    const budgetShared = grantA2Data.grant.spentMinor === 4500;
+
+    const passed = readBlocked && execBlocked && cancelBlocked && ownPlanSucceeded && spendIsolated && budgetShared;
+
+    return {
+      scenarioId: "S11",
+      name: "Cross-User Plan & Budget Isolation",
+      targetInvariant: "I6",
+      passed,
+      durationMs: Date.now() - start,
+      assertion: "User B cannot read, execute, or cancel User A's plan; budgets isolated across users and shared across sessions of same user.",
+      details: {
+        readBlocked,
+        execBlocked,
+        cancelBlocked,
+        ownPlanSucceeded,
+        spendIsolated,
+        budgetShared,
+        userASpent: grantAData.grant.spentMinor,
+        userBSpent: grantBData.grant.spentMinor,
+        userA2SharedSpent: grantA2Data.grant.spentMinor
+      }
+    };
+  }
+
+  /**
    * Executes the entire attack suite and compiles the complete scorecard.
    */
   public async runAll(): Promise<Scorecard> {
@@ -630,6 +731,7 @@ export class SiegeRunner {
     results.push(await this.runS8());
     results.push(await this.runS9());
     results.push(await this.runS10());
+    results.push(await this.runS11());
 
     const passedCount = results.filter((r) => r.passed).length;
     const failedCount = results.length - passedCount;
@@ -644,8 +746,8 @@ export class SiegeRunner {
       I3: { name: "Cryptographic Approval Binding", satisfied: results.find((r) => r.scenarioId === "S4")?.passed || false, testedBy: ["S4", "S7"] },
       I4: { name: "Clean Residue (Saga Rollback)", satisfied: results.find((r) => r.scenarioId === "S2")?.passed || false, testedBy: ["S2"] },
       I5: { name: "Structural Output Containment", satisfied: results.find((r) => r.scenarioId === "S5")?.passed || false, testedBy: ["S5"] },
-      I6: { name: "Temporal Authorization Boundary", satisfied: results.find((r) => r.scenarioId === "S6")?.passed || false, testedBy: ["S6"] },
-      I7: { name: "Cryptographic Audit Continuity", satisfied: verifyData.valid, testedBy: ["S1-S10"] },
+      I6: { name: "Temporal Authorization & User Isolation Boundary", satisfied: (results.find((r) => r.scenarioId === "S6")?.passed && results.find((r) => r.scenarioId === "S11")?.passed) || false, testedBy: ["S6", "S11"] },
+      I7: { name: "Cryptographic Audit Continuity", satisfied: verifyData.valid, testedBy: ["S1-S11"] },
       I8: { name: "Reconciliation over Blind Retries", satisfied: results.find((r) => r.scenarioId === "S8")?.passed || false, testedBy: ["S8"] },
       I9: { name: "Action Authenticity & Signed Receipts", satisfied: results.find((r) => r.scenarioId === "S9")?.passed || false, testedBy: ["S9"] },
       I10: { name: "Grace-Hold Containment (Undo Window)", satisfied: results.find((r) => r.scenarioId === "S10")?.passed || false, testedBy: ["S10"] }

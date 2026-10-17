@@ -73,7 +73,7 @@ program
       }
 
       const runner = new SiegeRunner(targetMcp, targetAdmin);
-      console.log("Executing 10 Core Adversarial Scenarios (S1 – S10)...\n");
+      console.log("Executing 11 Core Adversarial Scenarios (S1 – S11)...\n");
       const scorecard = await runner.runAll();
 
       for (const res of scorecard.results) {

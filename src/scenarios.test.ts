@@ -8,7 +8,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 
-describe("Warrant Siege: 10 Core Adversarial Attack Scenarios", () => {
+describe("Warrant Siege: 11 Core Adversarial Attack Scenarios", () => {
   let server: http.Server;
   let mcpUrl: string;
   let adminUrl: string;
@@ -35,12 +35,12 @@ describe("Warrant Siege: 10 Core Adversarial Attack Scenarios", () => {
     repo.close();
   });
 
-  it("executes all 10 adversarial scenarios and satisfies all invariants I1-I10", async () => {
+  it("executes all 11 adversarial scenarios and satisfies all invariants I1-I10", async () => {
     const runner = new SiegeRunner(mcpUrl, adminUrl);
     const scorecard = await runner.runAll();
 
-    expect(scorecard.totalScenarios).toBe(10);
-    expect(scorecard.passedScenarios).toBe(10);
+    expect(scorecard.totalScenarios).toBe(11);
+    expect(scorecard.passedScenarios).toBe(11);
     expect(scorecard.failedScenarios).toBe(0);
     expect(scorecard.allInvariantsSatisfied).toBe(true);
 
@@ -77,6 +77,6 @@ describe("Warrant Siege: 10 Core Adversarial Attack Scenarios", () => {
 
     const parsedJson = JSON.parse(jsonContent);
     expect(parsedJson.allInvariantsSatisfied).toBe(true);
-    expect(parsedJson.passedScenarios).toBe(10);
-  }, 40000); // 40s timeout for all 10 scenarios
+    expect(parsedJson.passedScenarios).toBe(11);
+  }, 40000); // 40s timeout for all 11 scenarios
 });
