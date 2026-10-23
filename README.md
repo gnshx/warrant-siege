@@ -2,7 +2,8 @@
 
 **Adversarial Safety Test Harness & Scorecard Generator for Voice & MCP Agent Gateways**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://opensource.org/licenses/MIT)](https://opensource.org/licenses/MIT)
+[![Watch Demo Video](https://img.shields.io/badge/YouTube-Watch%20Demo%20Video-red?logo=youtube)](https://youtu.be/OY3wq0Rrdk4)
 [![Invariants](https://img.shields.io/badge/Invariants-10%2F10_Satisfied-brightgreen.svg)](#architectural-invariants)
 [![Scenarios](https://img.shields.io/badge/Scenarios-11%2F11_Passed-brightgreen.svg)](#11-core-adversarial-attack-scenarios)
 [![MCP Spec](https://img.shields.io/badge/MCP-2025--11--25_Streamable_HTTP-purple.svg)](https://modelcontextprotocol.io)
